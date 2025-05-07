@@ -5,6 +5,7 @@ import {
 } from "langchain/agents";
 import { Service } from "typedi";
 import winston from "winston";
+import { createJiraTicketTool } from "../mcps/jira-mcp/services/CreateJiraTicket";
 import { fetchJiraTicketsTool } from "../mcps/jira-mcp/services/FetchTicket";
 
 const logger = winston.createLogger({
@@ -30,7 +31,7 @@ export class JiraService {
     if (!this.agentExecutor) {
       // Initialize with all Jira tools including the debug tool
       this.agentExecutor = await initializeAgentExecutorWithOptions(
-        [fetchJiraTicketsTool],
+        [fetchJiraTicketsTool, createJiraTicketTool],
         this.ollama,
         {
           agentType: "zero-shot-react-description",
@@ -63,7 +64,39 @@ export class JiraService {
 
       try {
         const result = await this.agentExecutor!.invoke({
-          input: ` We have tool like fetch_jira_tickets, if you this is what user has requested, please use this tool with input as  { "query" : "${query}" }`,
+          input: `
+          You have access to two tools:
+          
+          1. create_jira_ticket  
+             Use this to create a new Jira issue of Epic/Story type only.  
+             Expected input JSON:
+             {
+               "project": "string",             // Project key (e.g., "ENBDX")
+               "summary": "string",             // Title of the issue
+               "description": "string",         // Detailed description
+               "issuetype": "string"            // Issue type (e.g., "Story", "Epic").
+             }
+        
+          2. fetch_jira_tickets  
+             Use this to fetch all tickets from a Jira project.  
+             Expected input JSON:
+             {
+               "project_key": "string"          // The Jira project key
+             }
+          
+          Your job:
+          - Analyze the user query and determine the correct tool to use
+          - Extract all required values
+          - Respond with JSON only — in this exact format:
+            {
+              "tool": "create_jira_ticket" | "fetch_jira_tickets",
+              "input": { ...tool-specific input fields... }
+            }
+          
+          ⚠️ Output must be valid JSON. No comments, no extra text.
+          User query:
+          "${query}"
+          `,
         });
 
         logger.info(`Agent successfully processed Jira request`);
