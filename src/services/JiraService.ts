@@ -65,38 +65,63 @@ export class JiraService {
       try {
         const result = await this.agentExecutor!.invoke({
           input: `
-          You have access to two tools:
-          
-          1. create_jira_ticket  
-             Use this to create a new Jira issue of Epic/Story type only.  
-             Expected input JSON:
-             {
-               "project": "string",             // Project key (e.g., "ENBDX")
-               "summary": "string",             // Title of the issue
-               "description": "string",         // Detailed description
-               "issuetype": "string"            // Issue type (e.g., "Story", "Epic").
-             }
+        You have access to two tools:
         
-          2. fetch_jira_tickets  
-             Use this to fetch all tickets from a Jira project.  
-             Expected input JSON:
-             {
-               "project_key": "string"          // The Jira project key
-             }
-          
-          Your job:
-          - Analyze the user query and determine the correct tool to use
-          - Extract all required values
-          - Respond with JSON only — in this exact format:
-            {
-              "tool": "create_jira_ticket" | "fetch_jira_tickets",
-              "input": { ...tool-specific input fields... }
-            }
-          
-          ⚠️ Output must be valid JSON. No comments, no extra text.
-          User query:
-          "${query}"
-          `,
+        1. create_jira_ticket  
+           Use this to create a new Jira issue of type "Story" or "Epic".
+
+  
+              Required JSON input:
+
+                - For an "Epic":
+                  {
+                    "tool": "create_jira_ticket",
+                    "input": {
+                      "project": "string",
+                      "summary": "string",
+                      "description": "string",
+                      "issuetype": "Epic",
+                      "epic_name": "string"
+                    }
+                  }
+
+                - For a "Story":
+                  {
+                    "tool": "create_jira_ticket",
+                    "input": {
+                      "project": "string",
+                      "summary": "string",
+                      "description": "string",
+                      "issuetype": "Story"
+                    }
+                  }
+
+                
+ 
+
+        2. fetch_jira_tickets  
+           Use this to fetch all tickets from a Jira project.  
+           Expected input JSON:
+           {
+             "project_key": "string"            // The Jira project key
+           }
+        
+        Your job:
+        - Analyze the user query to determine which tool to use
+        - Extract or infer all required values
+        - Default to "Story" if issue type is not specified
+        - If "issuetype" is "Epic", you **must** include the "epic_name" field (same as summary if not provided).
+        - Respond with valid JSON only, in this exact format:
+          {
+            "tool": "create_jira_ticket" | "fetch_jira_tickets",
+            "input": { ...tool-specific input fields... }
+          }
+        
+        ⚠️ Output must be strictly valid JSON. No comments, explanations, markdown, or extra formatting.
+        
+        User query:
+        "${query}"
+        `,
         });
 
         logger.info(`Agent successfully processed Jira request`);

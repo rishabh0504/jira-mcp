@@ -32,7 +32,7 @@ export const createJiraTicketTool = new DynamicStructuredTool({
   description: "Create a new Jira ticket in a specified project.",
   schema: {},
   func: async (input: any) => {
-    const { project, summary, description, issuetype } =
+    const { project, summary, description, issuetype, epic_name } =
       JSON.parse(input) || {};
 
     try {
@@ -45,14 +45,18 @@ export const createJiraTicketTool = new DynamicStructuredTool({
 
       const url = `${JIRA_BASE_URL}/rest/api/2/issue/`;
 
-      const payload = {
-        fields: {
-          project: { key: project },
-          summary,
-          description,
-          issuetype: { name: issuetype || "Story" },
-        },
+      const fields: any = {
+        project: { key: project },
+        summary,
+        description,
+        issuetype: { name: issuetype || "Story" },
       };
+
+      if (issuetype === "Epic" && epic_name) {
+        fields.customfield_10104 = epic_name;
+      }
+
+      const payload = { fields };
 
       logger.info(`📤 Payload: ${JSON.stringify(payload, null, 2)}`);
 
