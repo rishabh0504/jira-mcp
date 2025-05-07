@@ -2,57 +2,57 @@ import { Body, JsonController, Post } from "routing-controllers";
 import { Service } from "typedi";
 import winston from "winston";
 import { OllamaService } from "../../src/services/OllamaService";
+
 const logger = winston.createLogger({
-  level: "info", // Change the level as needed (info, debug, error)
+  level: "info",
   format: winston.format.simple(),
-  transports: [
-    new winston.transports.Console(),
-    // Optionally, you can add a file transport
-    // new winston.transports.File({ filename: 'combined.log' })
-  ],
+  transports: [new winston.transports.Console()],
 });
+
 @Service()
 @JsonController("/ollama")
 export class OllamaController {
   constructor(private readonly ollamaService: OllamaService) {}
 
-  // Endpoint for testing general LLM completion functionality
   @Post("/complete")
-  public async complete(@Body() body: { inputText: string }) {
-    const { inputText } = body;
+  public async complete(@Body() body: { query: string }) {
+    const { query } = body;
 
-    // Log when inputText is missing
-    if (!inputText) {
-      logger.warn("❌ Missing 'inputText' in request body");
-      return { error: "Missing 'inputText' in request body" };
+    if (!query) {
+      logger.warn("❌ Missing 'query' in request body");
+      return { error: "Missing 'query' in request body" };
     }
 
     try {
-      // Log the inputText received and the initiation of Jira ticket fetch
-      logger.info("Received inputText, initiating Jira ticket fetch.", {
-        inputText,
+      logger.info("Received greeting request", { name: query });
+
+      // Call the service method to say hello
+      const result = await this.ollamaService.sayHello(query);
+
+      logger.info("Greeting completed successfully", {
+        name: query,
+        result,
       });
 
-      // Call the service method to fetch Jira tickets
-      const completion = await this.ollamaService.getJiraTickets(inputText);
-
-      // Log the success of the Jira ticket fetch
-      logger.info("Jira tickets successfully fetched.", {
-        inputText,
-        completion,
-      });
-
-      return { completion };
+      // Format the response in a consistent way
+      return {
+        success: true,
+        message:
+          typeof result === "string"
+            ? result
+            : result.message
+            ? result.message
+            : JSON.stringify(result),
+      };
     } catch (error: any) {
-      // Log error when something goes wrong
-      logger.error(
-        `❌ Error occurred while fetching Jira tickets: ${error.message}`,
-        {
-          inputText,
-          error: error.message,
-        }
-      );
-      return { error: "Internal server error: " + error.message };
+      logger.error(`❌ Error in greeting endpoint: ${error.message}`, {
+        name: query,
+        error: error.message,
+      });
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
 }

@@ -1,87 +1,106 @@
 import { Ollama } from "@langchain/ollama";
-import { AgentExecutor, initializeAgentExecutor } from "langchain/agents";
+import {
+  AgentExecutor,
+  initializeAgentExecutorWithOptions,
+} from "langchain/agents";
 import { Service } from "typedi";
 import winston from "winston";
-import { FetchJiraTicketsTool } from "../mcps/jira-mcp/services/FetchTicket";
+import { sayHelloTool } from "../mcps/jira-mcp/services/sayHelloTool";
+
 const logger = winston.createLogger({
-  level: "info", // Change the level as needed (info, debug, error)
+  level: "info",
   format: winston.format.simple(),
-  transports: [
-    new winston.transports.Console(),
-    // Optionally, you can add a file transport
-    // new winston.transports.File({ filename: 'combined.log' })
-  ],
+  transports: [new winston.transports.Console()],
 });
-// Define your service class@Service()
+
 @Service()
 export class OllamaService {
   private ollama: Ollama;
-  private tool: FetchJiraTicketsTool;
   private agentExecutor: AgentExecutor | null = null;
 
   constructor() {
     this.ollama = new Ollama({
-      model: "gemma3:4b", // Use your preferred model
+      model: "llama3.2:3b",
       temperature: 0,
-      maxRetries: 2,
       baseUrl: process.env.OLLAMA_HOST!,
     });
-
-    this.tool = new FetchJiraTicketsTool();
   }
 
-  // Initialize the agent executor asynchronously
   public async initializeAgent() {
     if (!this.agentExecutor) {
-      this.agentExecutor = await initializeAgentExecutor(
-        [this.tool],
+      this.agentExecutor = await initializeAgentExecutorWithOptions(
+        [sayHelloTool],
         this.ollama,
-        "zero-shot-react-description"
+        {
+          agentType: "zero-shot-react-description",
+          verbose: true,
+        }
       );
       console.log("✅ Agent Executor Initialized");
     }
   }
 
-  // Fetch Jira tickets using the agent executor
-  public async getJiraTickets(projectKey: string): Promise<any> {
+  public async sayHello(name: string): Promise<any> {
     try {
-      // Log when checking if agentExecutor is initialized
-      if (!this.agentExecutor) {
-        logger.info("AgentExecutor is not initialized, initializing agent.");
-        await this.initializeAgent(); // Ensure the agent is initialized before invoking
-      }
-
-      if (this.agentExecutor) {
-        // Log when starting the Jira ticket fetch
-        logger.info(`Fetching Jira tickets for project key: "${projectKey}"`);
-
-        // Execute the agent with the provided project key
-        const toolInput = { input: projectKey };
-        const result = await this.agentExecutor.invoke(toolInput);
-
-        // Log the fetched Jira tickets (or any relevant result)
-        logger.info(
-          `Jira tickets successfully fetched for project key: "${projectKey}"`,
-          {
-            result, // Log the actual result (ticket data)
-          }
+      // Try direct tool invocation first (safer approach)
+      try {
+        logger.info(`Directly invoking sayHelloTool for: "${name}"`);
+        const directResult = await sayHelloTool.invoke({ name });
+        logger.info(`Direct tool invocation successful for: "${name}"`);
+        return directResult.message || directResult;
+      } catch (directError: any) {
+        logger.warn(
+          `Direct tool invocation failed, falling back to agent: ${directError?.message}`
         );
 
-        return result;
-      } else {
-        logger.error("AgentExecutor is not initialized.");
-        throw new Error("AgentExecutor is not initialized.");
+        // Initialize agent if needed
+        if (!this.agentExecutor) {
+          logger.info("AgentExecutor is not initialized, initializing agent.");
+          await this.initializeAgent();
+        }
+
+        if (this.agentExecutor) {
+          logger.info(`Sending greeting request via agent for: "${name}"`);
+
+          // Be very explicit about how to use the tool
+          const result = await this.agentExecutor.invoke({
+            input: `I need to greet someone named ${name}. Use the say_hello tool with an object that has a name property: {name: "${name}"}`,
+          });
+
+          logger.info(
+            `Successfully processed greeting request via agent for: "${name}"`
+          );
+
+          // Return the clean result
+          return this.cleanResult(result.output);
+        } else {
+          logger.error("AgentExecutor is not initialized.");
+          throw new Error("AgentExecutor is not initialized.");
+        }
       }
     } catch (error: any) {
-      // Log the error with the projectKey that caused it
-      logger.error(
-        `❌ Error while fetching Jira tickets for project key: "${projectKey}"`,
-        {
-          error: error.message,
-        }
-      );
+      logger.error(`❌ Error while greeting: "${name}"`, {
+        error: error.message,
+      });
+      throw new Error(`Failed to say hello: ${error.message}`);
+    }
+  }
 
-      throw new Error("Failed to fetch Jira tickets.");
+  private cleanResult(responseText: string): string {
+    try {
+      // Try to find any JSON in the response
+      const jsonMatch = responseText.match(/\{.*\}/s);
+      if (jsonMatch) {
+        const jsonPart = jsonMatch[0];
+        const jsonResponse = JSON.parse(jsonPart);
+        return jsonResponse.message || jsonResponse.toString();
+      }
+
+      // If no JSON is found, return the plain text
+      return responseText.trim();
+    } catch (e) {
+      logger.warn("Failed to parse response as JSON:", { responseText });
+      return responseText.trim();
     }
   }
 }
