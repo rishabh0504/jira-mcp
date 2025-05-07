@@ -6,6 +6,7 @@ import {
 import { Service } from "typedi";
 import winston from "winston";
 import { sayHelloTool } from "../mcps/jira-mcp/services/sayHelloTool";
+import { JsonOutputParser } from "@langchain/core/output_parsers";
 
 const logger = winston.createLogger({
   level: "info",
@@ -17,17 +18,19 @@ const logger = winston.createLogger({
 export class OllamaService {
   private ollama: Ollama;
   private agentExecutor: AgentExecutor | null = null;
+  private initializedPromise: Promise<void> | null = null;
 
   constructor() {
     this.ollama = new Ollama({
-      model: "llama3.2:3b",
+      model: "llama3.1:8b",
       temperature: 0,
       baseUrl: process.env.OLLAMA_HOST!,
     });
+    this.initializedPromise = this.initializeAgent(); // Start initialization immediately
   }
 
-  public async initializeAgent() {
-    if (!this.agentExecutor) {
+  private async initializeAgent(): Promise<void> {
+    try {
       this.agentExecutor = await initializeAgentExecutorWithOptions(
         [sayHelloTool],
         this.ollama,
@@ -37,47 +40,25 @@ export class OllamaService {
         }
       );
       console.log("✅ Agent Executor Initialized");
+    } catch (error) {
+      logger.error("Error initializing agent:", error);
+      throw new Error("Failed to initialize agent executor.");
     }
   }
 
-  public async sayHello(name: string): Promise<any> {
+  public async sayHello(name: string): Promise<string> {
     try {
-      // Try direct tool invocation first (safer approach)
-      try {
-        logger.info(`Directly invoking sayHelloTool for: "${name}"`);
-        const directResult = await sayHelloTool.invoke({ name });
-        logger.info(`Direct tool invocation successful for: "${name}"`);
-        return directResult.message || directResult;
-      } catch (directError: any) {
-        logger.warn(
-          `Direct tool invocation failed, falling back to agent: ${directError?.message}`
-        );
+      // Wait for the agent to be initialized
+      await this.initializedPromise;
 
-        // Initialize agent if needed
-        if (!this.agentExecutor) {
-          logger.info("AgentExecutor is not initialized, initializing agent.");
-          await this.initializeAgent();
-        }
+      logger.info(`Sending greeting request via agent for: "${name}"`);
 
-        if (this.agentExecutor) {
-          logger.info(`Sending greeting request via agent for: "${name}"`);
+      const result = await this.agentExecutor!.invoke({
+        input: `{ "name" : "${name}" }`,
+      });
 
-          // Be very explicit about how to use the tool
-          const result = await this.agentExecutor.invoke({
-            input: `I need to greet someone named ${name}. Use the say_hello tool with an object that has a name property: {name: "${name}"}`,
-          });
-
-          logger.info(
-            `Successfully processed greeting request via agent for: "${name}"`
-          );
-
-          // Return the clean result
-          return this.cleanResult(result.output);
-        } else {
-          logger.error("AgentExecutor is not initialized.");
-          throw new Error("AgentExecutor is not initialized.");
-        }
-      }
+      logger.info(`Agent successfully returned result for "${name}"`);
+      return this.cleanResult(result.output);
     } catch (error: any) {
       logger.error(`❌ Error while greeting: "${name}"`, {
         error: error.message,
@@ -88,16 +69,14 @@ export class OllamaService {
 
   private cleanResult(responseText: string): string {
     try {
-      // Try to find any JSON in the response
       const jsonMatch = responseText.match(/\{.*\}/s);
       if (jsonMatch) {
         const jsonPart = jsonMatch[0];
         const jsonResponse = JSON.parse(jsonPart);
         return jsonResponse.message || jsonResponse.toString();
+      } else {
+        return responseText.trim(); // Return plain text if no JSON
       }
-
-      // If no JSON is found, return the plain text
-      return responseText.trim();
     } catch (e) {
       logger.warn("Failed to parse response as JSON:", { responseText });
       return responseText.trim();
