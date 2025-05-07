@@ -19,21 +19,22 @@ export class JiraController {
     try {
       logger.info("Running Jira connection diagnostics from API endpoint");
 
-      const result = await this.jiraService.debugJiraConnection();
+      // const result = await this.jiraService.debugJiraConnection();
 
       // Parse the result if it's a JSON string
-      try {
-        if (typeof result === "string") {
-          return JSON.parse(result);
-        }
-        return result;
-      } catch (e) {
-        return {
-          success: false,
-          message: "Failed to parse diagnostic results",
-          data: result,
-        };
-      }
+      // try {
+      //   if (typeof result === "string") {
+      //     return JSON.parse(result);
+      //   }
+      //   return result;
+      // } catch (e) {
+      //   return {
+      //     success: false,
+      //     message: "Failed to parse diagnostic results",
+      //     data: result,
+      //   };
+      // }
+      return true;
     } catch (error: any) {
       logger.error(`❌ Error in Jira debug endpoint:`, error.message);
       return {

@@ -37,7 +37,7 @@ export class OllamaController {
       // Format the response in a consistent way
       return {
         success: true,
-        message: result,
+        message: typeof result === "string" ? result : JSON.stringify(result),
       };
     } catch (error: any) {
       logger.error(`❌ Error in greeting endpoint: ${error.message}`, {

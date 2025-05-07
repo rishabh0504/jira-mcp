@@ -54,7 +54,7 @@ export class OllamaService {
       logger.info(`Sending greeting request via agent for: "${name}"`);
 
       const result = await this.agentExecutor!.invoke({
-        input: `{ "name" : "${name}" }`,
+        input: ` We have tool like say_hello, if you this is what user has requested, please use this tool with input as  { "name" : "${name}" }`,
       });
 
       logger.info(`Agent successfully returned result for "${name}"`);
