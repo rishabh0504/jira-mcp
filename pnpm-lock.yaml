@@ -17,6 +17,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.11.0
         version: 1.11.0
+      axios:
+        specifier: ^1.9.0
+        version: 1.9.0
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -31,7 +34,7 @@ importers:
         version: 5.1.0
       langchain:
         specifier: ^0.3.24
-        version: 0.3.24(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4)))(@langchain/ollama@0.2.0(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4))))(openai@4.97.0(zod@3.24.4))
+        version: 0.3.24(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4)))(@langchain/ollama@0.2.0(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4))))(axios@1.9.0)(openai@4.97.0(zod@3.24.4))
       morgan:
         specifier: ^1.10.0
         version: 1.10.0
@@ -286,6 +289,9 @@ packages:
 
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
+
+  axios@1.9.0:
+    resolution: {integrity: sha512-re4CqKTJaURpzbLHtIi6XpDv20/CnpXOtjRY5/CU32L8gU8ek9UIivcfvSWvmKEngmVbrUtPpdDwWDWL7DNHvg==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -613,6 +619,15 @@ packages:
 
   fn.name@1.1.0:
     resolution: {integrity: sha512-GRnmB5gPyJpAhTQdSZTSp9uaPSvl09KoYcMQtsB9rQoOmzs9dH6ffeccH+Z+cv6P68Hu5bC6JjRh4Ah/mHSNRw==}
+
+  follow-redirects@1.15.9:
+    resolution: {integrity: sha512-gew4GsXizNgdoRyqmyfMHyAmXsZDk6mHkSxZFCzW9gwlbtOW44CDtYavM+y+72qD/Vq2l550kMF52DT8fOLJqQ==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
 
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
@@ -1118,6 +1133,9 @@ packages:
   proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
     engines: {node: '>= 0.10'}
+
+  proxy-from-env@1.1.0:
+    resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
 
   pstree.remy@1.1.8:
     resolution: {integrity: sha512-77DZwxQmxKnu3aR542U+X8FypNzbfJ+C5XQDk3uWjWxn6151aIMGthWYRXTqT1E5oJvg+ljaa2OJi+VfvCOQ8w==}
@@ -1731,6 +1749,14 @@ snapshots:
 
   asynckit@0.4.0: {}
 
+  axios@1.9.0:
+    dependencies:
+      follow-redirects: 1.15.9
+      form-data: 4.0.2
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+
   balanced-match@1.0.2: {}
 
   base64-js@1.5.1: {}
@@ -2152,6 +2178,8 @@ snapshots:
 
   fn.name@1.1.0: {}
 
+  follow-redirects@1.15.9: {}
+
   foreground-child@3.3.1:
     dependencies:
       cross-spawn: 7.0.6
@@ -2384,7 +2412,7 @@ snapshots:
 
   kuler@2.0.0: {}
 
-  langchain@0.3.24(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4)))(@langchain/ollama@0.2.0(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4))))(openai@4.97.0(zod@3.24.4)):
+  langchain@0.3.24(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4)))(@langchain/ollama@0.2.0(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4))))(axios@1.9.0)(openai@4.97.0(zod@3.24.4)):
     dependencies:
       '@langchain/core': 0.3.53(openai@4.97.0(zod@3.24.4))
       '@langchain/openai': 0.5.10(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4)))
@@ -2401,6 +2429,7 @@ snapshots:
       zod-to-json-schema: 3.24.5(zod@3.24.4)
     optionalDependencies:
       '@langchain/ollama': 0.2.0(@langchain/core@0.3.53(openai@4.97.0(zod@3.24.4)))
+      axios: 1.9.0
     transitivePeerDependencies:
       - encoding
       - openai
@@ -2633,6 +2662,8 @@ snapshots:
     dependencies:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
+
+  proxy-from-env@1.1.0: {}
 
   pstree.remy@1.1.8: {}
 
