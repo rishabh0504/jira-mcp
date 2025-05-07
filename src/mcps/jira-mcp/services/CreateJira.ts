@@ -45,7 +45,7 @@ export class CreateJiraTicketTool extends DynamicStructuredTool<
         try {
           const JIRA_BASE_URL = process.env.JIRA_BASE_URL!;
           const JIRA_AUTH = Buffer.from(
-            `${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`
+            `${process.env.JIRA_USER}:${process.env.JIRA_PASSWORD}`
           ).toString("base64");
 
           const url = `${JIRA_BASE_URL}/rest/api/2/issue/`;
