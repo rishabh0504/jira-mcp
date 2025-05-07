@@ -1,7 +1,6 @@
 import axios from "axios";
 import { DynamicStructuredTool } from "langchain/tools";
 import winston from "winston";
-import { z } from "zod";
 
 // Logger setup
 const logger = winston.createLogger({
@@ -10,58 +9,43 @@ const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
-// Schema for a single ticket
-const singleTicketSchema = z.object({
-  project: z.string(),
-  summary: z.string(),
-  description: z.string(),
-  issueType: z.string().default("Task"),
-  priority: z.string().optional(),
-  assignee: z.string().optional(),
-});
-
-// Bulk ticket schema
-const bulkCreateSchema = z.object({
-  tickets: z.array(singleTicketSchema).describe("List of tickets to create"),
-});
-
 // Tool definition
-export const createJiraTicketsBulkTool = new DynamicStructuredTool({
-  name: "create_jira_tickets_bulk",
-  description: "Create multiple Jira tickets in a single bulk API call.",
-  schema: bulkCreateSchema,
+export const bulkCreateJiraTicketsTool = new DynamicStructuredTool({
+  name: "bulk_create_jira_tickets",
+  description: "Create multiple Jira tickets in one request.",
+  schema: {},
   func: async (input: any) => {
-    const { tickets } = input;
-
-    const JIRA_BASE_URL = process.env.JIRA_BASE_URL!;
-    const JIRA_USER = process.env.JIRA_USER!;
-    const JIRA_PASSWORD = process.env.JIRA_PASSWORD!;
-    const JIRA_AUTH = Buffer.from(`${JIRA_USER}:${JIRA_PASSWORD}`).toString(
-      "base64"
-    );
-
-    const url = `${JIRA_BASE_URL}/rest/api/2/issue/bulk`;
-
-    const issueUpdates = tickets.map((ticket: any) => {
-      const { project, summary, description, issueType, priority, assignee } =
-        ticket;
-      return {
-        fields: {
-          project: { key: project },
-          summary,
-          description,
-          issuetype: { name: issueType || "Task" },
-          ...(priority && { priority: { name: priority } }),
-          ...(assignee && { assignee: { name: assignee } }),
-        },
-      };
-    });
-
-    const payload = { issueUpdates };
-
-    logger.info(`📝 Bulk creating ${issueUpdates.length} Jira tickets`);
+    const { issues } = JSON.parse(input) || {};
 
     try {
+      const JIRA_BASE_URL = process.env.JIRA_BASE_URL!;
+      const JIRA_USER = process.env.JIRA_USER!;
+      const JIRA_PASSWORD = process.env.JIRA_PASSWORD!;
+      const JIRA_AUTH = Buffer.from(`${JIRA_USER}:${JIRA_PASSWORD}`).toString(
+        "base64"
+      );
+
+      const url = `${JIRA_BASE_URL}/rest/api/2/issue/bulk`;
+
+      const payload = {
+        issueUpdates: issues.map((issue: any) => {
+          const fields: any = {
+            project: { key: issue.project },
+            summary: issue.summary,
+            description: issue.description,
+            issuetype: { name: issue.issueType || "Story" },
+          };
+
+          if (issue.issueType === "Epic" && issue.epic_name) {
+            fields.customfield_10104 = issue.epic_name;
+          }
+
+          return { fields };
+        }),
+      };
+
+      logger.info(`📤 Bulk Payload: ${JSON.stringify(payload, null, 2)}`);
+
       const response = await axios.post(url, payload, {
         headers: {
           Authorization: `Basic ${JIRA_AUTH}`,
@@ -70,22 +54,22 @@ export const createJiraTicketsBulkTool = new DynamicStructuredTool({
         },
       });
 
-      const createdTickets = response.data.issues.map((issue: any) => ({
-        key: issue.key,
-        self: issue.self,
+      const created = response.data.issues.map((i: any) => ({
+        key: i.key,
+        self: i.self,
         status: "Created",
       }));
 
-      logger.info(`✅ Created ${createdTickets.length} tickets`);
-      return JSON.stringify(createdTickets, null, 2);
+      logger.info(
+        `✅ Tickets created: ${created.map((t: any) => t.key).join(", ")}`
+      );
+      return JSON.stringify(created, null, 2);
     } catch (error: any) {
       logger.error(
-        `❌ Bulk ticket creation failed`,
+        `❌ Error in bulk ticket creation:`,
         error?.response?.data || error.message
       );
-      return `Failed to create tickets: ${
-        error?.response?.data?.errorMessages || error.message
-      }`;
+      return `Failed to create bulk Jira tickets: ${error.message}`;
     }
   },
   returnDirect: true,

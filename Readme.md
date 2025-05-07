@@ -85,3 +85,59 @@ Error responses:
   "error": "Error message"
 }
 ```
+
+## Jira: My Profile
+
+```
+curl --location 'http://localhost:8080/rest/api/2/myself' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Basic YWRtaW46YWRtaW4=' \
+--header 'Cookie: JSESSIONID=203D7D1B82D3FCF6CAF6D94C69DA030B; atlassian.xsrf.token=B6J2-XRSH-5VFG-CVYS_49aa123dd24dac1cbf530d702008db9831b61e7c_lin'
+```
+
+## Jira fetch all tickets
+
+```
+curl --location 'http://localhost:3000/jira/interact' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=203D7D1B82D3FCF6CAF6D94C69DA030B; atlassian.xsrf.token=B6J2-XRSH-5VFG-CVYS_49aa123dd24dac1cbf530d702008db9831b61e7c_lin' \
+--data '{
+"query": "extract all tickets from the AICCODEGEN project"
+}'
+```
+
+## Jira: Create Ticket
+
+```
+curl --location 'http://localhost:3000/jira/interact' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=203D7D1B82D3FCF6CAF6D94C69DA030B; atlassian.xsrf.token=B6J2-XRSH-5VFG-CVYS_49aa123dd24dac1cbf530d702008db9831b61e7c_lin' \
+--data '{
+"query": "Create a new story in AICCODEGEN with title: API Integration Issue, description: The API returns 500 errors when accessing user data"
+}'
+```
+
+## Jira: Create Ticket Epic
+
+```
+curl --location 'http://localhost:3000/jira/interact' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=203D7D1B82D3FCF6CAF6D94C69DA030B; atlassian.xsrf.token=B6J2-XRSH-5VFG-CVYS_49aa123dd24dac1cbf530d702008db9831b61e7c_lin' \
+--data '{
+  "query": "Create an Epic in AICCODEGEN with title: API Integration Issue, description: The API returns 500 errors when accessing user data"
+}'
+```
+
+PORT=3000
+APP_NAME=TypeDI App
+OLLAMA_HOST=http://127.0.0.1:11434
+
+JIRA_BASE_URL=http://localhost:8080
+JIRA_EMAIL=rishabh.tiwari0504@gmail.com
+JIRA_API_TOKEN=OTM2NTgwNDYyODE5OjoN0Mm5aPtXqZDNMd86Jw0iOggx
+
+JIRA_USER=admin
+JIRA_PASSWORD=admin
+
+JIRA_MCP_TOEKN=OTM2NTgwNDYyODE5OjoN0Mm5aPtXqZDNMd86Jw0iOggx
+PROJECT_KEY=AICCODEGEN

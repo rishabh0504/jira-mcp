@@ -7,6 +7,7 @@ import { Service } from "typedi";
 import winston from "winston";
 import { createJiraTicketTool } from "../mcps/jira-mcp/services/CreateJiraTicket";
 import { fetchJiraTicketsTool } from "../mcps/jira-mcp/services/FetchTicket";
+import { bulkCreateJiraTicketsTool } from "src/mcps/jira-mcp/services/BulkCreateJiraTicket";
 
 const logger = winston.createLogger({
   level: "info",
@@ -31,7 +32,7 @@ export class JiraService {
     if (!this.agentExecutor) {
       // Initialize with all Jira tools including the debug tool
       this.agentExecutor = await initializeAgentExecutorWithOptions(
-        [fetchJiraTicketsTool, createJiraTicketTool],
+        [fetchJiraTicketsTool, createJiraTicketTool, bulkCreateJiraTicketsTool],
         this.ollama,
         {
           agentType: "zero-shot-react-description",
@@ -65,14 +66,13 @@ export class JiraService {
       try {
         const result = await this.agentExecutor!.invoke({
           input: `
-        You have access to two tools:
+        You have access to three tools:
         
         1. create_jira_ticket  
            Use this to create a new Jira issue of type "Story" or "Epic".
-
-  
+        
               Required JSON input:
-
+        
                 - For an "Epic":
                   {
                     "tool": "create_jira_ticket",
@@ -84,7 +84,7 @@ export class JiraService {
                       "epic_name": "string"
                     }
                   }
-
+        
                 - For a "Story":
                   {
                     "tool": "create_jira_ticket",
@@ -95,25 +95,44 @@ export class JiraService {
                       "issuetype": "Story"
                     }
                   }
-
-                
- 
-
+        
         2. fetch_jira_tickets  
            Use this to fetch all tickets from a Jira project.  
            Expected input JSON:
            {
-             "project_key": "string"            // The Jira project key
+             "tool": "fetch_jira_tickets",
+             "input": {
+               "project_key": "string"
+             }
+           }
+        
+        3. bulk_create_jira_tickets  
+           Use this to create multiple Jira tickets in one call.  
+           Required JSON input:
+           {
+             "tool": "bulk_create_jira_tickets",
+             "input": {
+               "issues": [
+                 {
+                   "project": "string",
+                   "summary": "string",
+                   "description": "string",
+                   "issuetype": "Story" | "Epic",
+                   "epic_name": "string (required if issuetype is Epic)"
+                 },
+                 ...
+               ]
+             }
            }
         
         Your job:
-        - Analyze the user query to determine which tool to use
-        - Extract or infer all required values
-        - Default to "Story" if issue type is not specified
-        - If "issuetype" is "Epic", you **must** include the "epic_name" field (same as summary if not provided).
+        - Analyze the user query to determine which tool to use.
+        - Extract or infer all required values.
+        - Default to "Story" if issue type is not specified.
+        - If "issuetype" is "Epic", you **must** include the "epic_name" field (use the same as summary if not provided).
         - Respond with valid JSON only, in this exact format:
           {
-            "tool": "create_jira_ticket" | "fetch_jira_tickets",
+            "tool": "create_jira_ticket" | "fetch_jira_tickets" | "bulk_create_jira_tickets",
             "input": { ...tool-specific input fields... }
           }
         
