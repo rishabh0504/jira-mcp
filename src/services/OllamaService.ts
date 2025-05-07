@@ -1,8 +1,17 @@
 import { Ollama } from "@langchain/ollama";
 import { AgentExecutor, initializeAgentExecutor } from "langchain/agents";
 import { Service } from "typedi";
+import winston from "winston";
 import { FetchJiraTicketsTool } from "../mcps/jira-mcp/services/FetchTicket";
-
+const logger = winston.createLogger({
+  level: "info", // Change the level as needed (info, debug, error)
+  format: winston.format.simple(),
+  transports: [
+    new winston.transports.Console(),
+    // Optionally, you can add a file transport
+    // new winston.transports.File({ filename: 'combined.log' })
+  ],
+});
 // Define your service class@Service()
 @Service()
 export class OllamaService {
@@ -36,24 +45,42 @@ export class OllamaService {
   // Fetch Jira tickets using the agent executor
   public async getJiraTickets(projectKey: string): Promise<any> {
     try {
+      // Log when checking if agentExecutor is initialized
       if (!this.agentExecutor) {
+        logger.info("AgentExecutor is not initialized, initializing agent.");
         await this.initializeAgent(); // Ensure the agent is initialized before invoking
       }
 
       if (this.agentExecutor) {
-        console.log(`Fetching Jira tickets for project key: "${projectKey}"`);
+        // Log when starting the Jira ticket fetch
+        logger.info(`Fetching Jira tickets for project key: "${projectKey}"`);
 
         // Execute the agent with the provided project key
-        const toolInput = { projectKey };
+        const toolInput = { input: projectKey };
         const result = await this.agentExecutor.invoke(toolInput);
 
-        console.log(`Jira tickets: ${result}`);
+        // Log the fetched Jira tickets (or any relevant result)
+        logger.info(
+          `Jira tickets successfully fetched for project key: "${projectKey}"`,
+          {
+            result, // Log the actual result (ticket data)
+          }
+        );
+
         return result;
       } else {
+        logger.error("AgentExecutor is not initialized.");
         throw new Error("AgentExecutor is not initialized.");
       }
-    } catch (error) {
-      console.error("Error while fetching Jira tickets", error);
+    } catch (error: any) {
+      // Log the error with the projectKey that caused it
+      logger.error(
+        `❌ Error while fetching Jira tickets for project key: "${projectKey}"`,
+        {
+          error: error.message,
+        }
+      );
+
       throw new Error("Failed to fetch Jira tickets.");
     }
   }
