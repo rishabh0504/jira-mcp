@@ -44,7 +44,7 @@ export class FetchJiraTicketsTool extends DynamicStructuredTool<
           }
 
           // The URL for the Jira API
-          const url = `${JIRA_BASE_URL}/rest/api/2/search?jql=project=${projectKey}`;
+          const url = `${JIRA_BASE_URL}/rest/api/2/search?jql=project=${projectKey} AND (issuetype="Epic" OR issuetype="Story") `;
 
           logger.info(`Calling Jira API: ${url}`);
 
@@ -82,12 +82,45 @@ export class FetchJiraTicketsTool extends DynamicStructuredTool<
 
           console.log(JSON.stringify(response.data.issues));
 
-          const issues = response.data.issues.map((issue: any) => ({
-            key: issue.key,
-            summary: issue.fields.summary,
-            status: issue.fields.status.name,
-            assignee: issue.fields.assignee?.displayName || "Unassigned",
-          }));
+          const issues = response.data.issues.map((issue: any) => {
+            const issueType = issue.fields.issuetype.name;
+            const isEpic = issueType === "Epic";
+            const isStory = issueType === "Story";
+
+            // Extract fields relevant to both Epics and Stories
+            const acceptanceCriteria =
+              issue.fields.description
+                .match(/{\*}Acceptance Criteria{\*}:(.*?)(?=\r?\n\r?\n)/s)?.[1]
+                ?.trim() || "No acceptance criteria available"; // Assuming criteria is in description
+            const summary = issue.fields.summary;
+            const status = issue.fields.status.name;
+            const assignee = issue.fields.assignee?.displayName || "Unassigned";
+            const priority = issue.fields.priority?.name || "Medium"; // Add default in case no priority
+            const created = issue.fields.created;
+            const updated = issue.fields.updated;
+
+            // Extract project and issue links, or any other fields you need
+            const projectName = issue.fields.project?.name || "Unknown Project";
+            const issueLink = issue.self;
+
+            return {
+              key: issue.key,
+              type: issueType,
+              summary,
+              acceptanceCriteria,
+              status,
+              assignee,
+              priority,
+              created,
+              updated,
+              projectName,
+              issueLink,
+              isEpic,
+              isStory,
+            };
+          });
+
+          console.log(issues);
 
           logger.info(
             `✅ Retrieved ${issues.length} tickets from project ${projectKey}`
