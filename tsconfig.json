@@ -17,8 +17,13 @@
       "@modelcontextprotocol/sdk/*": [
         "node_modules/@modelcontextprotocol/sdk/*"
       ]
-    }
+    },
+    "types": ["node", "@langchain/core"]
   },
-  "include": ["src/**/*.ts", "node_modules/@types"],
+  "include": [
+    "src/**/*.ts",
+    "node_modules/@types",
+    "node_modules/@langchain/core"
+  ],
   "exclude": ["node_modules"]
 }

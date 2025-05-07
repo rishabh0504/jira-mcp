@@ -1,69 +1,60 @@
 import { Ollama } from "@langchain/ollama";
-import { PromptTemplate } from "@langchain/core/prompts";
+import { AgentExecutor, initializeAgentExecutor } from "langchain/agents";
 import { Service } from "typedi";
+import { FetchJiraTicketsTool } from "../mcps/jira-mcp/services/FetchTicket";
 
+// Define your service class@Service()
 @Service()
 export class OllamaService {
   private ollama: Ollama;
-  private prompt: PromptTemplate;
-  private chain: any;
+  private tool: FetchJiraTicketsTool;
+  private agentExecutor: AgentExecutor | null = null;
 
   constructor() {
-    // Initialize Ollama with model and configuration
     this.ollama = new Ollama({
-      model: "gemma3:4b", // Or your preferred local model
+      model: "gemma3:4b", // Use your preferred model
       temperature: 0,
       maxRetries: 2,
-      baseUrl: process.env.OLLAMA_HOST!, // Make sure this is set in your .env
+      baseUrl: process.env.OLLAMA_HOST!,
     });
 
-    // Creating a dynamic prompt template with LangChain
-    this.prompt = PromptTemplate.fromTemplate(
-      "How to say {input} in {output_language}:\n"
-    );
-
-    // Create a chain that connects the prompt template to the Ollama LLM
-    this.chain = this.prompt.pipe(this.ollama);
+    this.tool = new FetchJiraTicketsTool();
   }
 
-  // Translation using prompt
-  public async getTranslatedResponse(
-    inputText: string,
-    outputLanguage: string
-  ): Promise<string> {
-    try {
-      console.log(
-        `Translating "${inputText}" to "${outputLanguage}" using LangChain prompt`
+  // Initialize the agent executor asynchronously
+  public async initializeAgent() {
+    if (!this.agentExecutor) {
+      this.agentExecutor = await initializeAgentExecutor(
+        [this.tool],
+        this.ollama,
+        "zero-shot-react-description"
       );
-
-      const response = await this.chain.invoke({
-        input: inputText,
-        output_language: outputLanguage,
-      });
-
-      console.log(`Translation result: ${response.text}`);
-      return response.text;
-    } catch (error) {
-      console.error("Error while generating translation", error);
-      throw new Error("Failed to generate translation.");
+      console.log("✅ Agent Executor Initialized");
     }
   }
 
-  // Raw LLM completion (no prompt)
-  public async getLLMCompletion(inputText: string): Promise<string> {
+  // Fetch Jira tickets using the agent executor
+  public async getJiraTickets(projectKey: string): Promise<any> {
     try {
-      console.log(`📤 Sending to Ollama: "${inputText}"`);
+      if (!this.agentExecutor) {
+        await this.initializeAgent(); // Ensure the agent is initialized before invoking
+      }
 
-      const result = await this.ollama.invoke(inputText);
+      if (this.agentExecutor) {
+        console.log(`Fetching Jira tickets for project key: "${projectKey}"`);
 
-      console.log(`📥 Ollama responded: "${result}"`);
-      return result;
-    } catch (error: any) {
-      console.error(
-        "❌ Error while generating LLM completion:",
-        error.message || error
-      );
-      throw new Error("Failed to generate completion from Ollama.");
+        // Execute the agent with the provided project key
+        const toolInput = { projectKey };
+        const result = await this.agentExecutor.invoke(toolInput);
+
+        console.log(`Jira tickets: ${result}`);
+        return result;
+      } else {
+        throw new Error("AgentExecutor is not initialized.");
+      }
+    } catch (error) {
+      console.error("Error while fetching Jira tickets", error);
+      throw new Error("Failed to fetch Jira tickets.");
     }
   }
 }
