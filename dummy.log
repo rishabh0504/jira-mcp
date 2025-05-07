@@ -141,3 +141,16 @@ JIRA_PASSWORD=admin
 
 JIRA_MCP_TOEKN=OTM2NTgwNDYyODE5OjoN0Mm5aPtXqZDNMd86Jw0iOggx
 PROJECT_KEY=AICCODEGEN
+
+
+## Jira: Bulk Create Ticket
+
+```
+curl --location 'http://localhost:3000/jira/interact' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=203D7D1B82D3FCF6CAF6D94C69DA030B; atlassian.xsrf.token=B6J2-XRSH-5VFG-CVYS_49aa123dd24dac1cbf530d702008db9831b61e7c_lin' \
+--data '{
+  "query": "Create the following Jira tickets in project AICCODEGEN:\n1. Epic - Title: Backend Refactor, Description: Cleanup and refactor legacy authentication code\n2. Story - Title: Update API Docs, Description: Add missing endpoints to the developer portal\n3. Story - Title: Optimize DB Queries, Description: Improve performance of user data fetching\n4. Epic - Title: Frontend Redesign, Description: Implement new UI for dashboard"
+}
+'
+```
