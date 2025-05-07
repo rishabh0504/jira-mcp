@@ -1,0 +1,43 @@
+{
+  "name": "backend-i2r",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rimraf dist && tsc",
+    "start": "nodemon"
+  },
+  "type": "commonjs",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@langchain/core": "^0.3.53",
+    "@langchain/ollama": "^0.2.0",
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "langchain": "^0.3.24",
+    "morgan": "^1.10.0",
+    "pkce-challenge": "^5.0.0",
+    "reflect-metadata": "^0.2.2",
+    "routing-controllers": "^0.11.2",
+    "routing-controllers-openapi": "^5.0.0",
+    "swagger-ui-express": "^5.0.1",
+    "typedi": "^0.10.0",
+    "winston": "^3.17.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.9",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.14",
+    "nodemon": "^3.1.10",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
+  }
+}
