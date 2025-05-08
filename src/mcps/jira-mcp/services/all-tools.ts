@@ -486,3 +486,90 @@ export const createBulkIssuesTool: ToolDefinition = {
 };
 
 
+
+
+
+import { ToolDefinition } from '@modelcontextprotocol/sdk/server';
+import axios from 'axios';
+import https from 'https';
+import { z } from 'zod';
+
+// 🔐 Jira Config
+const JIRA_BASE_URL = 'https://your-onprem-jira.example.com/rest/api/2';
+const JIRA_AUTH_TOKEN = process.env.JIRA_AUTH_TOKEN;
+if (!JIRA_AUTH_TOKEN) throw new Error('Missing JIRA_AUTH_TOKEN');
+
+const jira = axios.create({
+  baseURL: JIRA_BASE_URL,
+  headers: {
+    Authorization: `Basic ${JIRA_AUTH_TOKEN}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
+  },
+  httpsAgent: new https.Agent({ rejectUnauthorized: true })
+});
+
+// 🧾 Zod Schema
+const issueInputSchema = z.object({
+  projectName: z.string().min(1),
+  summary: z.string().min(5),
+  description: z.string().min(5),
+  issueType: z.enum(['Epic', 'Story']),
+  acceptanceCriteria: z.string().optional()
+});
+
+// 🛠️ Tool Definition
+export const createIssueTool: ToolDefinition = {
+  name: 'create_issue',
+  description: 'Creates a single Jira issue (Epic or Story) under a specified project.',
+  parameters: issueInputSchema,
+
+  execute: async (args: any) => {
+    const issue = issueInputSchema.parse(args);
+
+    try {
+      // Fetch all available projects from Jira
+      const allProjectsRes = await jira.get('/project');
+      const allProjects = allProjectsRes.data as Array<{ name: string; key: string }>;
+
+      // Find the project by name
+      const matchedProject = allProjects.find(
+        (p) => p.name.toLowerCase() === issue.projectName.toLowerCase()
+      );
+
+      if (!matchedProject) {
+        throw new Error(`Project "${issue.projectName}" not found. Please provide the exact project name.`);
+      }
+
+      // Prepare the issue payload
+      const issuePayload = {
+        fields: {
+          project: { key: matchedProject.key },
+          summary: issue.summary,
+          description: `${issue.description}\n\n**Acceptance Criteria:**\n${issue.acceptanceCriteria || 'N/A'}`,
+          issuetype: { name: issue.issueType }
+        }
+      };
+
+      // Create the issue in Jira
+      const response = await jira.post('/issue', issuePayload);
+
+      // Return the created issue's key and URL
+      return {
+        status: 'success',
+        created: {
+          key: response.data.key,
+          url: `${JIRA_BASE_URL.replace('/rest/api/2', '')}/browse/${response.data.key}`
+        }
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error.response?.data || error.message
+      };
+    }
+  }
+};
+
+
+
