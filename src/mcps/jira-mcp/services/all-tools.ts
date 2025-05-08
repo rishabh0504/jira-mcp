@@ -250,3 +250,72 @@ const fetchProjectIssuesTool: ToolDefinition = {
     }
   }
 };
+
+
+
+
+import { ToolDefinition } from '@modelcontextprotocol/sdk/server';
+import axios from 'axios';
+import https from 'https';
+import { z } from 'zod';
+
+// 🔐 Jira Axios Setup
+const JIRA_BASE_URL = 'https://your-onprem-jira.example.com/rest/api/2';
+const JIRA_AUTH_TOKEN = process.env.JIRA_AUTH_TOKEN;
+if (!JIRA_AUTH_TOKEN) throw new Error("Missing JIRA_AUTH_TOKEN");
+
+const jira = axios.create({
+  baseURL: JIRA_BASE_URL,
+  headers: {
+    Authorization: `Basic ${JIRA_AUTH_TOKEN}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
+  },
+  httpsAgent: new https.Agent({ rejectUnauthorized: true })
+});
+
+// 🛠️ Create Issue Tool
+export const createIssueTool: ToolDefinition = {
+  name: 'create_issue',
+  description: 'Create an Epic or Story in Jira. Requires project key, summary, and description.',
+
+  parameters: z.object({
+    projectKey: z.string().min(1, 'Project key is required'),
+    summary: z.string().min(5, 'Summary must be at least 5 characters'),
+    description: z.string().min(5, 'Description must be at least 5 characters'),
+    issueType: z.enum(['Epic', 'Story']),
+    acceptanceCriteria: z.string().optional()
+  }),
+
+  execute: async (args: any) => {
+    const { projectKey, summary, description, issueType, acceptanceCriteria } =
+      createIssueTool.parameters.parse(args);
+
+    const fullDescription = `${description}\n\n**Acceptance Criteria:**\n${acceptanceCriteria || 'N/A'}`;
+
+    try {
+      const res = await jira.post('/issue', {
+        fields: {
+          project: { key: projectKey },
+          summary,
+          description: fullDescription,
+          issuetype: { name: issueType }
+        }
+      });
+
+      const issueKey = res.data.key;
+
+      return {
+        status: 'success',
+        issueKey,
+        url: `${JIRA_BASE_URL.replace('/rest/api/2', '')}/browse/${issueKey}`
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error.response?.data || error.message
+      };
+    }
+  }
+};
+
