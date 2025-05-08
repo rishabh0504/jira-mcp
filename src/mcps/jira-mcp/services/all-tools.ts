@@ -176,3 +176,77 @@ const server = new McpServer({
 });
 
 server.start();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { McpServer, ToolDefinition } from '@modelcontextprotocol/sdk/server';
+import axios from 'axios';
+import https from 'https';
+import { z } from 'zod';
+
+// === Axios Setup ===
+const JIRA_BASE_URL = 'https://your-onprem-jira.example.com/rest/api/2';
+const JIRA_AUTH_TOKEN = process.env.JIRA_AUTH_TOKEN;
+if (!JIRA_AUTH_TOKEN) throw new Error("Missing JIRA_AUTH_TOKEN");
+
+const jira = axios.create({
+  baseURL: JIRA_BASE_URL,
+  headers: {
+    Authorization: `Basic ${JIRA_AUTH_TOKEN}`,
+    'Content-Type': 'application/json'
+  },
+  httpsAgent: new https.Agent({ rejectUnauthorized: true })
+});
+
+// === Tool Definition ===
+const fetchProjectIssuesTool: ToolDefinition = {
+  name: 'fetch_project_issues',
+  description: 'Fetch all Epics and Stories from a Jira project.',
+
+  parameters: z.object({
+    projectKey: z.string().min(1)
+  }),
+
+  execute: async (args: any) => {
+    const { projectKey } = fetchProjectIssuesTool.parameters.parse(args);
+
+    try {
+      const jql = `project = "${projectKey}" AND issuetype in (Epic, Story) ORDER BY created DESC`;
+
+      const res = await jira.get('/search', {
+        params: {
+          jql,
+          maxResults: 100,
+          fields: ['key', 'summary', 'issuetype', 'status', 'assignee']
+        }
+      });
+
+      const issues = res.data.issues.map((issue: any) => ({
+        key: issue.key,
+        summary: issue.fields.summary,
+        issueType: issue.fields.issuetype.name,
+        status: issue.fields.status.name,
+        assignee: issue.fields.assignee?.displayName || 'Unassigned'
+      }));
+
+      return { status: 'success', issues };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error.response?.data || error.message
+      };
+    }
+  }
+};
