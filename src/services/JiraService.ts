@@ -8,6 +8,7 @@ import winston from "winston";
 import { createJiraTicketTool } from "../mcps/jira-mcp/services/CreateJiraTicket";
 import { fetchJiraTicketsTool } from "../mcps/jira-mcp/services/FetchTicket";
 import { bulkCreateJiraTicketsTool } from "src/mcps/jira-mcp/services/BulkCreateJiraTicket";
+import { BaseMessageLike } from "@langchain/core/messages";
 
 const logger = winston.createLogger({
   level: "info",
@@ -151,6 +152,62 @@ export class JiraService {
       }
     } else {
       throw new Error("Failed to initialize Jira agent");
+    }
+  }
+
+  public async createJiraTcketFromBRD(brdContent: string): Promise<any> {
+    try {
+      if (!this.agentExecutor) {
+        logger.info("Agent not initialized, initializing now");
+        await this.initializeAgent();
+      }
+
+      if (this.agentExecutor) {
+        logger.info(`Using brd for: "${brdContent}"`);
+
+        try {
+          const result = await this.agentExecutor!.invoke({
+            input: `
+           You are a Jira ticket generator.
+
+        Given the following business requirement document (BRD), generate Epic and Story Jira tickets.
+
+        BRD content:
+        """${brdContent}"""
+
+        Return a valid JSON array of Jira tickets in this format:
+        [
+          {
+            "project": "AICCODEGEN",
+            "summary": "Epic summary",
+            "description": "Detailed epic description",
+            "issuetype": "Epic",
+            "epic_name": "Epic summary"
+          },
+          {
+            "project": "AICCODEGEN",
+            "summary": "Story summary",
+            "description": "Detailed story description",
+            "issuetype": "Story"
+          }
+        ]
+
+          Do not include any extra text. Only return the JSON array.
+          `,
+          });
+
+          logger.info(`BRD content created successfully`);
+          return result;
+        } catch (error: any) {
+          logger.error(`Agent execution failed: ${error.message}`);
+          throw new Error(`Failed to process Jira request: ${error.message}`);
+        }
+      } else {
+        throw new Error("Failed to initialize Jira agent");
+      }
+    } catch (error) {
+      console.error("Error while generating Jira tickets:", error);
+      throw new Error("Failed to generate tickets from BRD.");
     }
   }
 }

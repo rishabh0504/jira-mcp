@@ -95,4 +95,21 @@ export class JiraController {
       };
     }
   }
+
+  @Post("/sync-with-jira")
+  public async syncWithJira(@Body() body: { query: string }) {
+    try {
+      logger.info("Syncing with jira");
+
+      const result = await this.jiraService.interactWithJira(body.query);
+
+      return result;
+    } catch (error: any) {
+      logger.error(`❌ Error in Jira debug endpoint:`, error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
 }
