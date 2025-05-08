@@ -319,3 +319,79 @@ export const createIssueTool: ToolDefinition = {
   }
 };
 
+
+
+
+import { ToolDefinition } from '@modelcontextprotocol/sdk/server';
+import axios from 'axios';
+import https from 'https';
+import { z } from 'zod';
+
+// 🔐 Jira Axios Setup
+const JIRA_BASE_URL = 'https://your-onprem-jira.example.com/rest/api/2';
+const JIRA_AUTH_TOKEN = process.env.JIRA_AUTH_TOKEN;
+if (!JIRA_AUTH_TOKEN) throw new Error("Missing JIRA_AUTH_TOKEN");
+
+const jira = axios.create({
+  baseURL: JIRA_BASE_URL,
+  headers: {
+    Authorization: `Basic ${JIRA_AUTH_TOKEN}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
+  },
+  httpsAgent: new https.Agent({ rejectUnauthorized: true })
+});
+
+// 🧾 Zod Schema for Bulk Issues
+const bulkIssueSchema = z.object({
+  projectKey: z.string().min(1),
+  summary: z.string().min(5),
+  description: z.string().min(5),
+  issueType: z.enum(['Epic', 'Story']),
+  acceptanceCriteria: z.string().optional()
+});
+
+export const createBulkIssuesTool: ToolDefinition = {
+  name: 'create_bulk_issues',
+  description: 'Create multiple Jira issues (Epics or Stories) in bulk.',
+
+  parameters: z.object({
+    issues: z.array(bulkIssueSchema).min(1, 'At least one issue is required')
+  }),
+
+  execute: async (args: any) => {
+    const { issues } = createBulkIssuesTool.parameters.parse(args);
+
+    const payload = {
+      issueUpdates: issues.map(issue => ({
+        fields: {
+          project: { key: issue.projectKey },
+          summary: issue.summary,
+          description: `${issue.description}\n\n**Acceptance Criteria:**\n${issue.acceptanceCriteria || 'N/A'}`,
+          issuetype: { name: issue.issueType }
+        }
+      }))
+    };
+
+    try {
+      const res = await jira.post('/issue/bulk', payload);
+
+      const created = res.data.issues.map((i: any) => ({
+        key: i.key,
+        url: `${JIRA_BASE_URL.replace('/rest/api/2', '')}/browse/${i.key}`
+      }));
+
+      return {
+        status: 'success',
+        created
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error.response?.data || error.message
+      };
+    }
+  }
+};
+
+
