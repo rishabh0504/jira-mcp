@@ -154,3 +154,13 @@ curl --location 'http://localhost:3000/jira/interact' \
 }
 '
 ```
+
+
+## Jira: Bulk Create Ticket from brd and sync with jira
+curl --location 'http://localhost:3000/jira/sync-with-jira' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=203D7D1B82D3FCF6CAF6D94C69DA030B; atlassian.xsrf.token=B6J2-XRSH-5VFG-CVYS_49aa123dd24dac1cbf530d702008db9831b61e7c_lin' \
+--data '{
+  "query": "Create the following Jira tickets in project AICCODEGEN:\n1. Epic - Title: Backend Refactor, Description: Cleanup and refactor legacy authentication and session management code\n2. Story - Title: Modularize login/logout flows, Description: Rewrite the login and logout handlers to follow a reusable, modular structure\n3. Story - Title: Replace deprecated token utility, Description: Remove use of the deprecated token-utils package and replace with custom secure JWT utility\n4. Story - Title: Add test coverage to auth module, Description: Implement Jest-based unit and integration tests to achieve 90%+ test coverage\n5. Epic - Title: Frontend Redesign, Description: Redesign the dashboard and settings UI for improved usability\n6. Story - Title: Implement new dashboard layout, Description: Develop the redesigned widget-based layout using Tailwind CSS\n7. Story - Title: Add dark mode support, Description: Enable light/dark themes with toggle and system preference detection\n8. Story - Title: Improve accessibility, Description: Ensure all components are navigable by keyboard and screen-reader friendly\n9. Epic - Title: Developer Experience Enhancements, Description: Improve developer portal documentation and onboarding\n10. Story - Title: Update API reference documentation, Description: Ensure all current endpoints are documented, with examples\n11. Story - Title: Create onboarding tutorial, Description: Design a beginner-friendly onboarding guide for new developers\n12. Story - Title: Add interactive API playground, Description: Implement a sandbox where devs can try API calls directly"
+}
+'
