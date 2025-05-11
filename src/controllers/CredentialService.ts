@@ -2,6 +2,19 @@ import { Service } from 'typedi';
 import { CredentialModel } from './CredentialModel';
 import { CryptoUtil } from './CryptoUtil';
 import { CredentialDTO, CredentialResponse } from './types';
+export interface CredentialDTO {
+  token: string;
+  baseUrl: string;
+  proxyUrl: string;
+  projectName: string;
+}
+
+export interface CredentialResponse {
+  token: string;
+  baseUrl: string;
+  proxyUrl: string;
+  projectName: string;
+}
 
 @Service()
 export class CredentialService {
